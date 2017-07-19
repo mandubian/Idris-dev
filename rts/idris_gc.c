@@ -7,6 +7,8 @@
 VAL copy(VM* vm, VAL x) {
     int ar;
     Closure* cl = NULL;
+    Closure* clVar = NULL;
+
     if (x==NULL || ISINT(x)) {
         return x;
     }
@@ -62,6 +64,27 @@ VAL copy(VM* vm, VAL x) {
     case CT_CDATA:
         cl = MKCDATAc(vm, x->info.c_heap_item);
         c_heap_mark_item(x->info.c_heap_item);
+        break;
+    case CT_MUTVAR:
+        // forces copy of grabbed pointer & reallocates c_heap_item->data to the new one
+        clVar = copy(vm, (VAL)(x->info.c_heap_item->data));
+        if (clVar==NULL || ISINT(clVar)) {
+            x->info.c_heap_item->data = clVar;
+        }
+        else {
+            switch(GETTY(clVar)) {
+                case CT_FWD:
+                    x->info.c_heap_item->data = clVar->info.ptr;
+                    break;
+                default:
+                    x->info.c_heap_item->data = clVar;
+                    break;
+            }
+        }
+        // Don't forget to mark it as used
+        c_heap_mark_item(x->info.c_heap_item);
+        // relink the cheap item in FP-heap
+        cl = MKMUTVAR0(vm, x->info.c_heap_item, 1);
         break;
     default:
         break;

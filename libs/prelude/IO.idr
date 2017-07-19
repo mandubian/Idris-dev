@@ -183,6 +183,7 @@ namespace FFI_C
        C_FnT   : C_FnTypes t -> C_Types (CFnPtr t)
        C_IntT  : C_IntTypes i -> C_Types i
        C_CData : C_Types CData
+       C_MutVar: C_Types MutVar
 
     ||| A descriptor for the C FFI. See the constructors of `C_Types`
     ||| and `C_IntTypes` for the concrete types that are available.

@@ -397,6 +397,25 @@ VAL MKB64(VM* vm, uint64_t bits64) {
     return cl;
 }
 
+VAL MKMUTVAR0(VM* vm, MutVar item, int outerlock) {
+    // create an CHeap item pointing to val & not using free for finalizer
+    Closure* cl = allocate(sizeof(Closure), outerlock);
+    // it's not a CDATA but a MUTVAR
+    SETTY(cl, CT_MUTVAR);
+    cl->info.c_heap_item = item;
+    return cl;
+}
+
+VAL MKMUTVAR(VM* vm, MutVar item) {
+    c_heap_insert_if_needed(vm, &vm->c_heap, item);
+    return MKMUTVAR0(vm, item, 0);
+}
+
+VAL MKMUTVARc(VM* vm, MutVar item) {
+    c_heap_insert_if_needed(vm, &vm->c_heap, item);
+    return MKMUTVAR0(vm, item, 1);
+}
+
 void dumpStack(VM* vm) {
     int i = 0;
     VAL* root;
@@ -434,8 +453,12 @@ void dumpVal(VAL v) {
         printf("CT_FWD ");
         dumpVal((VAL)(v->info.ptr));
         break;
+    case CT_MUTVAR:
+        printf("CT_MUTVAR ");
+        dumpVal((VAL)(v->info.c_heap_item->data));
+        break;
     default:
-        printf("val");
+        printf("val[ty:%d]", GETTY(v));
     }
 
 }
@@ -865,6 +888,10 @@ VAL doCopyTo(VM* vm, VAL x) {
             memcpy(cl, x, size);
         }
         break;
+    case CT_MUTVAR:
+        printf("CT_MUTVAR0");
+        cl = MKMUTVAR0(vm, x->info.c_heap_item, 1);
+        break;
     default:
         assert(0); // We're in trouble if this happens...
     }
@@ -1014,7 +1041,7 @@ Msg* idris_recvMessageFrom(VM* vm, int channel_id, VM* sender) {
 
     struct timespec timeout;
     int status;
-    
+
     if (sender && sender->active == 0) { return NULL; } // No VM to receive from
 
     pthread_mutex_lock(&vm->inbox_block);

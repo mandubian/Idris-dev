@@ -113,6 +113,7 @@ data FType = FArith ArithTy
            | FManagedPtr
            | FCData
            | FAny
+           | FMutVar
   deriving (Show, Eq)
 
 -- FIXME: Why not use this for all the IRs now?

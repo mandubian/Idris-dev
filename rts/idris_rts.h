@@ -27,7 +27,8 @@
 typedef enum {
     CT_CON, CT_INT, CT_BIGINT, CT_FLOAT, CT_STRING, CT_STROFFSET,
     CT_BITS8, CT_BITS16, CT_BITS32, CT_BITS64, CT_UNIT, CT_PTR, CT_FWD,
-    CT_MANAGEDPTR, CT_RAWDATA, CT_CDATA
+    CT_MANAGEDPTR, CT_RAWDATA, CT_CDATA,
+    CT_MUTVAR
 } ClosureType;
 
 typedef struct Closure *VAL;
@@ -148,6 +149,8 @@ CData cdata_allocate(size_t size, CDataFinalizer * finalizer);
 CData cdata_manage(void * data, size_t size, CDataFinalizer * finalizer);
 
 
+typedef CHeapItem * MutVar;
+
 // Create a new VM
 VM* init_vm(int stack_size, size_t heap_size,
             int max_threads);
@@ -192,6 +195,10 @@ typedef void(*func)(VM*, VAL*);
 #define GETBITS16(x) (((VAL)(x))->info.bits16)
 #define GETBITS32(x) (((VAL)(x))->info.bits32)
 #define GETBITS64(x) (((VAL)(x))->info.bits64)
+
+#define GETMUTVAR(x) (((VAL)(x))->info.c_heap_item)
+#define GETMUTVARDATA(x) (x->data)
+#define SETMUTVARDATA(x, d) (x->data = d)
 
 #define TAG(x) (ISINT(x) || x == NULL ? (-1) : ( GETTY(x) == CT_CON ? (x)->info.c.tag_arity >> 8 : (-1)) )
 #define ARITY(x) (ISINT(x) || x == NULL ? (-1) : ( GETTY(x) == CT_CON ? (x)->info.c.tag_arity & 0x000000ff : (-1)) )
@@ -250,6 +257,9 @@ VAL MKB16(VM* vm, uint16_t b);
 VAL MKB32(VM* vm, uint32_t b);
 VAL MKB64(VM* vm, uint64_t b);
 VAL MKCDATA(VM* vm, CHeapItem * item);
+VAL MKMUTVAR0(VM* vm, MutVar item, int outerlock);
+VAL MKMUTVAR(VM* vm, MutVar item);
+VAL MKMUTVARc(VM* vm, MutVar item);
 
 // following versions don't take a lock when allocating
 VAL MKFLOATc(VM* vm, double val);
